@@ -62,5 +62,5 @@ jobs:
     - name: Run CodeAnt Scan
       run: |
         curl -X POST "https://api.codeant.ai/scan" ^
-        -H "Authorization: Bearer ${{ secrets.CODEANT_API_KEY }}" ^
+        -H "Authorization: Bearer ${{ secrets.SECRETS_CODEANT_API_KEY }}" ^
         -d "repo=${{ github.repository }}"
