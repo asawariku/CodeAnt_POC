@@ -85,13 +85,25 @@ jobs:
         run: echo "Deploying application..."
 
       # 🚀 Notify CodeAnt for DORA Metrics
-      - name: Notify CodeAnt Deployment
-        run: |
-          curl -X POST "https://api.codeant.ai/deployments" ^
-            -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN_GITHUB }}" ^
-            -H "Content-Type: application/json" ^
-            -d "{\"repo\":\"${{ github.repository }}\",\"environment\":\"production\",\"commit_id\":\"${{ github.sha }}\"}"
+       - name: Notify CodeAnt Deployment
+  shell: pwsh
+  run: |
+    $headers = @{
+      Authorization = "Bearer ${{ secrets.ACCESS_TOKEN_GITHUB }}"
+      "Content-Type" = "application/json"
+    }
 
+    $body = @{
+      repo = "${{ github.repository }}"
+      environment = "production"
+      commit_id = "${{ github.sha }}"
+    } | ConvertTo-Json
+
+    Invoke-RestMethod -Uri "https://api.codeant.ai/deployments" `
+      -Method Post `
+      -Headers $headers `
+      -Body $body
+      
   codeant-scan:
     runs-on: ubuntu-latest
 
