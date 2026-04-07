@@ -41,8 +41,7 @@ jobs:
 
     - name: Run Tests with Coverage
       run: |
-        vstest.console.exe **\*test*.dll /EnableCodeCoverage
-
+        dotnet test --collect:"Code Coverage"
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
