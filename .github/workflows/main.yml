@@ -80,29 +80,7 @@ jobs:
           access_token: ${{ secrets.ACCESS_TOKEN_GITHUB }}
           coverage_file: coverage.xml
 
-      # 🚀 Simulated Deployment
-      - name: Simulate Deployment
-        run: echo "Deploying application..."
-
-      # 🚀 Notify CodeAnt for DORA Metrics (FIXED)
-      - name: Notify CodeAnt Deployment
-        shell: pwsh
-        run: |
-          $headers = @{
-            Authorization = "Bearer ${{ secrets.ACCESS_TOKEN_GITHUB }}"
-            "Content-Type" = "application/json"
-          }
-
-          $body = @{
-            repo = "${{ github.repository }}"
-            environment = "production"
-            commit_id = "${{ github.sha }}"
-          } | ConvertTo-Json
-
-          Invoke-RestMethod -Uri "https://api.codeant.ai/deployments" `
-            -Method Post `
-            -Headers $headers `
-            -Body $body
+      
 
   codeant-scan:
     runs-on: ubuntu-latest
