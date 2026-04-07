@@ -39,7 +39,7 @@ jobs:
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
           msbuild $sln.FullName /p:Configuration=Release
 
-      # ✅ Install coverlet collector (PowerShell-safe)
+      # ✅ Install coverlet collector
       - name: Install coverlet collector
         run: |
           $proj = Get-ChildItem -Recurse -Filter *.csproj | Where-Object { $_.FullName -like "*Tests*" } | Select-Object -First 1
@@ -56,7 +56,7 @@ jobs:
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
           dotnet test $sln.FullName --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-      # ✅ Find coverage file safely
+      # ✅ Find coverage file
       - name: Find coverage file
         id: coverage
         run: |
@@ -68,7 +68,7 @@ jobs:
           Write-Host "Coverage file found at: $($file.FullName)"
           echo "file=$($file.FullName)" >> $env:GITHUB_OUTPUT
 
-      # ✅ Prepare coverage file for CodeAnt
+      # ✅ Prepare coverage file
       - name: Prepare coverage file
         run: |
           Copy-Item "${{ steps.coverage.outputs.file }}" coverage.xml
@@ -80,30 +80,30 @@ jobs:
           access_token: ${{ secrets.ACCESS_TOKEN_GITHUB }}
           coverage_file: coverage.xml
 
-          # 🚀 Simulated Deployment (IMPORTANT for DORA)
+      # 🚀 Simulated Deployment
       - name: Simulate Deployment
         run: echo "Deploying application..."
 
-      # 🚀 Notify CodeAnt for DORA Metrics
-       - name: Notify CodeAnt Deployment
-  shell: pwsh
-  run: |
-    $headers = @{
-      Authorization = "Bearer ${{ secrets.ACCESS_TOKEN_GITHUB }}"
-      "Content-Type" = "application/json"
-    }
+      # 🚀 Notify CodeAnt for DORA Metrics (FIXED)
+      - name: Notify CodeAnt Deployment
+        shell: pwsh
+        run: |
+          $headers = @{
+            Authorization = "Bearer ${{ secrets.ACCESS_TOKEN_GITHUB }}"
+            "Content-Type" = "application/json"
+          }
 
-    $body = @{
-      repo = "${{ github.repository }}"
-      environment = "production"
-      commit_id = "${{ github.sha }}"
-    } | ConvertTo-Json
+          $body = @{
+            repo = "${{ github.repository }}"
+            environment = "production"
+            commit_id = "${{ github.sha }}"
+          } | ConvertTo-Json
 
-    Invoke-RestMethod -Uri "https://api.codeant.ai/deployments" `
-      -Method Post `
-      -Headers $headers `
-      -Body $body
-      
+          Invoke-RestMethod -Uri "https://api.codeant.ai/deployments" `
+            -Method Post `
+            -Headers $headers `
+            -Body $body
+
   codeant-scan:
     runs-on: ubuntu-latest
 
