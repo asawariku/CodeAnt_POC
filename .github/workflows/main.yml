@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   solution: 'unit-testing-using-mstest/*.sln'
@@ -17,49 +18,44 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # Checkout code
-    - name: Checkout
+    # 🔹 Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    # Setup NuGet
+    # 🔹 Setup NuGet
     - name: Setup NuGet
       uses: nuget/setup-nuget@v1
 
-    # Restore
+    # 🔹 Restore
     - name: Restore NuGet Packages
-      run: nuget restore ${{ env.solution }}
+      run: nuget restore "${{ env.solution }}"
 
-    # Build
+    # 🔹 Build
     - name: Build Solution
-      run: msbuild ${{ env.solution }} /p:Configuration=${{ env.buildConfiguration }}
+      run: msbuild "${{ env.solution }}" /p:Configuration=${{ env.buildConfiguration }}
 
-    # Run Tests with Coverage
+    # 🔹 Run Tests with Coverage
     - name: Run Tests with Code Coverage
       run: |
         vstest.console.exe unit-testing-using-mstest\**\*test*.dll /EnableCodeCoverage
 
-    # Install ReportGenerator
+    # 🔹 Install ReportGenerator
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
-    # Generate Coverage Report
+    # 🔹 Generate Coverage Report
     - name: Generate Coverage Report
       run: |
         reportgenerator -reports:**/*.coverage -targetdir:coveragereport
 
-    # Upload Coverage
+    # 🔹 Upload Coverage
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4
       with:
         name: CoverageReport
         path: coveragereport
 
-    # CodeAnt Scan
-    - name: Run CodeAnt Scan
-      run: |
-        curl -X POST "https://api.codeant.ai/scan" ^
-        -H "Authorization: Bearer ${{ secrets.CODEANT_API_KEY }}" ^
-        -d "repo=${{ github.repository }}"
+    # 🔹 CodeAnt Scan
     - name: Run CodeAnt Scan
       run: |
         curl -X POST "https://api.codeant.ai/scan" ^
