@@ -1,4 +1,4 @@
-name: .NET Framework CI + Coverage + CodeAnt
+name: .NET CI + Coverage + CodeAnt
 
 on:
   push:
@@ -7,10 +7,9 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
 
 env:
-  solution: 'samples/core/getting-started/unit-testing-using-mstest/*.sln'
+  solution: 'unit-testing-using-mstest/*.sln'
   buildConfiguration: 'Release'
 
 jobs:
@@ -18,44 +17,49 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 🔹 Checkout code
+    # Checkout code
     - name: Checkout
       uses: actions/checkout@v4
 
-    # 🔹 Setup NuGet
+    # Setup NuGet
     - name: Setup NuGet
       uses: nuget/setup-nuget@v1
 
-    # 🔹 Restore packages
+    # Restore
     - name: Restore NuGet Packages
       run: nuget restore ${{ env.solution }}
 
-    # 🔹 Build solution
+    # Build
     - name: Build Solution
       run: msbuild ${{ env.solution }} /p:Configuration=${{ env.buildConfiguration }}
 
-    # 🔹 Run tests with coverage
+    # Run Tests with Coverage
     - name: Run Tests with Code Coverage
       run: |
-        vstest.console.exe **\*test*.dll /EnableCodeCoverage
+        vstest.console.exe unit-testing-using-mstest\**\*test*.dll /EnableCodeCoverage
 
-    # 🔹 Install ReportGenerator tool
+    # Install ReportGenerator
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
-    # 🔹 Generate readable coverage report
+    # Generate Coverage Report
     - name: Generate Coverage Report
       run: |
         reportgenerator -reports:**/*.coverage -targetdir:coveragereport
 
-    # 🔹 Upload coverage report
+    # Upload Coverage
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4
       with:
         name: CoverageReport
         path: coveragereport
 
-    # 🔹 Run CodeAnt Scan
+    # CodeAnt Scan
+    - name: Run CodeAnt Scan
+      run: |
+        curl -X POST "https://api.codeant.ai/scan" ^
+        -H "Authorization: Bearer ${{ secrets.CODEANT_API_KEY }}" ^
+        -d "repo=${{ github.repository }}"
     - name: Run CodeAnt Scan
       run: |
         curl -X POST "https://api.codeant.ai/scan" ^
