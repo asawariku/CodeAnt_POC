@@ -19,29 +19,33 @@ jobs:
     - name: Setup NuGet
       uses: nuget/setup-nuget@v1
 
-    # ✅ FIX: Add MSBuild to PATH
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1
 
-    # 🔍 Debug (optional)
+    # 🔍 Debug (keep for now)
     - name: List Files
       run: dir -Recurse
 
-    # 🔍 Auto-detect solution
+    # Restore
     - name: Restore NuGet Packages
       run: |
         $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
         Write-Host "Using solution: $($sln.FullName)"
         nuget restore $sln.FullName
 
+    # Build
     - name: Build Solution
       run: |
         $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
         msbuild $sln.FullName /p:Configuration=Release
 
+    # ✅ FIXED TEST STEP
     - name: Run Tests with Coverage
       run: |
-        dotnet test --collect:"Code Coverage"
+        $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+        Write-Host "Running tests for: $($sln.FullName)"
+        dotnet test $sln.FullName --collect:"Code Coverage"
+
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
