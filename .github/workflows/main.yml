@@ -19,11 +19,15 @@ jobs:
     - name: Setup NuGet
       uses: nuget/setup-nuget@v1
 
-    # 🔍 DEBUG (VERY IMPORTANT - KEEP THIS FOR NOW)
+    # ✅ FIX: Add MSBuild to PATH
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    # 🔍 Debug (optional)
     - name: List Files
       run: dir -Recurse
 
-    # ✅ AUTO DETECT SOLUTION
+    # 🔍 Auto-detect solution
     - name: Restore NuGet Packages
       run: |
         $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
