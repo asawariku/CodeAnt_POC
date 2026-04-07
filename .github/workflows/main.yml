@@ -39,7 +39,7 @@ jobs:
         $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
         msbuild $sln.FullName /p:Configuration=Release
 
-    # ✅ FIXED TEST STEP
+    # Test with Coverage
     - name: Run Tests with Coverage
       run: |
         $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
@@ -59,8 +59,17 @@ jobs:
         name: CoverageReport
         path: coveragereport
 
+    # ✅ FIXED POSITION (INSIDE steps)
     - name: Run CodeAnt Scan
+      shell: pwsh
       run: |
-        curl -X POST "https://api.codeant.ai/scan"
-        -H "Authorization: Bearer ${{ secrets.SECRETS_CODEANT_API_KEY }}" ^
-        -d "repo=${{ github.repository }}"
+        $headers = @{
+          Authorization = "Bearer ${{ secrets.CODEANT_API_KEY }}"
+          "Content-Type" = "application/json"
+        }
+
+        $body = @{
+          repo = "${{ github.repository }}"
+        } | ConvertTo-Json
+
+        Invoke-RestMethod -Uri "https://api.codeant.ai/scan" -Method Post -Headers $headers -Body $body
