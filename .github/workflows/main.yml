@@ -7,55 +7,51 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
-
-env:
-  solution: 'unit-testing-using-mstest/*.sln'
-  buildConfiguration: 'Release'
 
 jobs:
   build-test:
     runs-on: windows-latest
 
     steps:
-    # 🔹 Checkout
-    - name: Checkout code
+    - name: Checkout
       uses: actions/checkout@v4
 
-    # 🔹 Setup NuGet
     - name: Setup NuGet
       uses: nuget/setup-nuget@v1
 
-    # 🔹 Restore
+    # 🔍 DEBUG (VERY IMPORTANT - KEEP THIS FOR NOW)
+    - name: List Files
+      run: dir -Recurse
+
+    # ✅ AUTO DETECT SOLUTION
     - name: Restore NuGet Packages
-      run: nuget restore "${{ env.solution }}"
-
-    # 🔹 Build
-    - name: Build Solution
-      run: msbuild "${{ env.solution }}" /p:Configuration=${{ env.buildConfiguration }}
-
-    # 🔹 Run Tests with Coverage
-    - name: Run Tests with Code Coverage
       run: |
-        vstest.console.exe unit-testing-using-mstest\**\*test*.dll /EnableCodeCoverage
+        $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+        Write-Host "Using solution: $($sln.FullName)"
+        nuget restore $sln.FullName
 
-    # 🔹 Install ReportGenerator
+    - name: Build Solution
+      run: |
+        $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+        msbuild $sln.FullName /p:Configuration=Release
+
+    - name: Run Tests with Coverage
+      run: |
+        vstest.console.exe **\*test*.dll /EnableCodeCoverage
+
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
-    # 🔹 Generate Coverage Report
     - name: Generate Coverage Report
       run: |
         reportgenerator -reports:**/*.coverage -targetdir:coveragereport
 
-    # 🔹 Upload Coverage
-    - name: Upload Coverage Report
+    - name: Upload Coverage
       uses: actions/upload-artifact@v4
       with:
         name: CoverageReport
         path: coveragereport
 
-    # 🔹 CodeAnt Scan
     - name: Run CodeAnt Scan
       run: |
         curl -X POST "https://api.codeant.ai/scan" ^
