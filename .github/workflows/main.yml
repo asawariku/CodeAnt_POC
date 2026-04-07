@@ -39,20 +39,24 @@ jobs:
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
           msbuild $sln.FullName /p:Configuration=Release
 
-      # ✅ Install coverlet collector (FIX)
+      # ✅ Install coverlet collector (PowerShell-safe)
       - name: Install coverlet collector
         run: |
-          dotnet add **/*.csproj package coverlet.collector
+          $proj = Get-ChildItem -Recurse -Filter *.csproj | Where-Object { $_.FullName -like "*Tests*" } | Select-Object -First 1
+          if ($null -eq $proj) {
+            Write-Error "Test project not found!"
+            exit 1
+          }
+          Write-Host "Adding coverlet to: $($proj.FullName)"
+          dotnet add $proj.FullName package coverlet.collector
 
-      # ✅ Run tests with coverage (FIXED)
+      # ✅ Run tests with coverage
       - name: Run tests with coverage
         run: |
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-          dotnet test $sln.FullName `
-            --collect:"XPlat Code Coverage" `
-            --results-directory ./TestResults
+          dotnet test $sln.FullName --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-      # ✅ Find coverage file (SAFE)
+      # ✅ Find coverage file safely
       - name: Find coverage file
         id: coverage
         run: |
@@ -64,52 +68,17 @@ jobs:
           Write-Host "Coverage file found at: $($file.FullName)"
           echo "file=$($file.FullName)" >> $env:GITHUB_OUTPUT
 
-      # ✅ Rename to coverage.xml (CodeAnt compatible)
+      # ✅ Prepare coverage file for CodeAnt
       - name: Prepare coverage file
         run: |
           Copy-Item "${{ steps.coverage.outputs.file }}" coverage.xml
 
-      # ✅ Upload coverage to CodeAnt AI
+      # ✅ Upload coverage to CodeAnt
       - name: Upload coverage to CodeAnt AI
         uses: CodeAnt-AI/codeant-coverage-action@v0.0.5
         with:
           access_token: ${{ secrets.ACCESS_TOKEN_GITHUB }}
           coverage_file: coverage.xml
-
-      # Test with Coverage
-      #- name: Run Tests with Coverage
-      #  run: |
-      #    $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-      #    Write-Host "Running tests for: $($sln.FullName)"
-      #    dotnet test $sln.FullName --collect:"Code Coverage"
-
-      #- name: Install ReportGenerator
-      #  run: dotnet tool install -g dotnet-reportgenerator-globaltool
-
-      #- name: Generate Coverage Report
-      #  run: |
-      #    reportgenerator -reports:**/*.coverage -targetdir:coveragereport
-
-      # - name: Upload Coverage
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: CoverageReport
-      #     path: coveragereport
-
-      # ✅ FIXED POSITION (INSIDE steps)
-      # - name: Run CodeAnt Scan
-      #   shell: pwsh
-      #   run: |
-      #     $headers = @{
-      #       Authorization = "Bearer ${{ secrets.CODEANT_API_KEY }}"
-      #       "Content-Type" = "application/json"
-      #     }
-      #
-      #     $body = @{
-      #       repo = "${{ github.repository }}"
-      #     } | ConvertTo-Json
-      #
-      #     Invoke-RestMethod -Uri "https://api.codeant.ai/scan" -Method Post -Headers $headers -Body $body
 
   codeant-scan:
     runs-on: ubuntu-latest
