@@ -39,26 +39,42 @@ jobs:
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
           msbuild $sln.FullName /p:Configuration=Release
 
-      # ✅ FIXED: .NET test instead of pytest
+      # ✅ Install coverlet collector (FIX)
+      - name: Install coverlet collector
+        run: |
+          dotnet add **/*.csproj package coverlet.collector
+
+      # ✅ Run tests with coverage (FIXED)
       - name: Run tests with coverage
         run: |
           $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-          dotnet test $sln.FullName --collect:"XPlat Code Coverage"
+          dotnet test $sln.FullName `
+            --collect:"XPlat Code Coverage" `
+            --results-directory ./TestResults
 
-      # ✅ Find generated coverage file
+      # ✅ Find coverage file (SAFE)
       - name: Find coverage file
         id: coverage
         run: |
           $file = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
+          if ($null -eq $file) {
+            Write-Error "Coverage file not found!"
+            exit 1
+          }
           Write-Host "Coverage file found at: $($file.FullName)"
           echo "file=$($file.FullName)" >> $env:GITHUB_OUTPUT
 
-      # ✅ Upload coverage to CodeAnt
+      # ✅ Rename to coverage.xml (CodeAnt compatible)
+      - name: Prepare coverage file
+        run: |
+          Copy-Item "${{ steps.coverage.outputs.file }}" coverage.xml
+
+      # ✅ Upload coverage to CodeAnt AI
       - name: Upload coverage to CodeAnt AI
         uses: CodeAnt-AI/codeant-coverage-action@v0.0.5
         with:
           access_token: ${{ secrets.ACCESS_TOKEN_GITHUB }}
-          coverage_file: ${{ steps.coverage.outputs.file }}
+          coverage_file: coverage.xml
 
       # Test with Coverage
       #- name: Run Tests with Coverage
