@@ -13,63 +13,86 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup NuGet
-      uses: nuget/setup-nuget@v1
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v1
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1
 
-    # 🔍 Debug (keep for now)
-    - name: List Files
-      run: dir -Recurse
+      # 🔍 Debug (keep for now)
+      - name: List Files
+        run: dir -Recurse
 
-    # Restore
-    - name: Restore NuGet Packages
-      run: |
-        $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-        Write-Host "Using solution: $($sln.FullName)"
-        nuget restore $sln.FullName
+      # Restore
+      - name: Restore NuGet Packages
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+          Write-Host "Using solution: $($sln.FullName)"
+          nuget restore $sln.FullName
 
-    # Build
-    - name: Build Solution
-      run: |
-        $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-        msbuild $sln.FullName /p:Configuration=Release
+      # Build
+      - name: Build Solution
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+          msbuild $sln.FullName /p:Configuration=Release
 
-    # Test with Coverage
-    - name: Run Tests with Coverage
-      run: |
-        $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-        Write-Host "Running tests for: $($sln.FullName)"
-        dotnet test $sln.FullName --collect:"Code Coverage"
+      - name: Run tests with coverage
+        run: |
+          # Your test command that generates coverage report
+          pytest --cov --cov-report=xml
 
-    - name: Install ReportGenerator
-      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+      - name: Upload coverage to CodeAnt AI
+        uses: CodeAnt-AI/codeant-coverage-action@v0.0.5
+        with:
+          access_token: ${{ secrets.ACCESS_TOKEN_GITHUB }}
+          coverage_file: coverage.xml
 
-    - name: Generate Coverage Report
-      run: |
-        reportgenerator -reports:**/*.coverage -targetdir:coveragereport
+      # Test with Coverage
+      #- name: Run Tests with Coverage
+      #  run: |
+      #    $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+      #    Write-Host "Running tests for: $($sln.FullName)"
+      #    dotnet test $sln.FullName --collect:"Code Coverage"
 
-    - name: Upload Coverage
-      uses: actions/upload-artifact@v4
-      with:
-        name: CoverageReport
-        path: coveragereport
+      #- name: Install ReportGenerator
+      #  run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
-    # ✅ FIXED POSITION (INSIDE steps)
-    - name: Run CodeAnt Scan
-      shell: pwsh
-      run: |
-        $headers = @{
-          Authorization = "Bearer ${{ secrets.CODEANT_API_KEY }}"
-          "Content-Type" = "application/json"
-        }
+      #- name: Generate Coverage Report
+      #  run: |
+      #    reportgenerator -reports:**/*.coverage -targetdir:coveragereport
 
-        $body = @{
-          repo = "${{ github.repository }}"
-        } | ConvertTo-Json
+      # - name: Upload Coverage
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: CoverageReport
+      #     path: coveragereport
 
-        Invoke-RestMethod -Uri "https://api.codeant.ai/scan" -Method Post -Headers $headers -Body $body
+      # ✅ FIXED POSITION (INSIDE steps)
+      # - name: Run CodeAnt Scan
+      #   shell: pwsh
+      #   run: |
+      #     $headers = @{
+      #       Authorization = "Bearer ${{ secrets.CODEANT_API_KEY }}"
+      #       "Content-Type" = "application/json"
+      #     }
+      #
+      #     $body = @{
+      #       repo = "${{ github.repository }}"
+      #     } | ConvertTo-Json
+      #
+      #     Invoke-RestMethod -Uri "https://api.codeant.ai/scan" -Method Post -Headers $headers -Body $body
+
+  codeant-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run CodeAnt CI Scan
+        uses: CodeAnt-AI/codeant-ci-scan-action@v0.0.5
+        with:
+          access_token: ${{ secrets.ACCESS_TOKEN_GITHUB }}
